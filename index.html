@@ -1,43 +1,146 @@
 
 <!DOCTYPE html>
 <html>
-  <head>
-    <base target="_top">
-    <style>
-      body { background-color: #e6f5e6; font-family: Arial, sans-serif; }
-      .container { width: 90%; margin: auto; padding: 20px; }
-      .leito-box { background: #ffffff; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; }
-      label { display: block; font-weight: bold; margin-top: 10px; }
-      select, input[type=text] { width: 100%; padding: 6px; margin-top: 4px; }
-      button { margin-top: 10px; padding: 6px 12px; }
-    </style>
-  </head>
-  <body>
-    <div class="container">
-      <h2>Controle de Altas – UTI Multi 3F</h2>
-      <form id="loginForm">
-        <label>Senha de Acesso:</label>
-        <input type="password" id="senha" />
-        <button type="submit">Entrar</button>
-      </form>
-      <div id="painel" style="display:none;"></div>
-    </div>
-    <script>
-      document.getElementById("loginForm").addEventListener("submit", function(e) {
-        e.preventDefault();
-        var senha = document.getElementById("senha").value;
-        google.script.run.withSuccessHandler(function(authLevel) {
-          if (authLevel === "leitura" || authLevel === "edicao") {
-            document.getElementById("loginForm").style.display = "none";
-            document.getElementById("painel").style.display = "block";
-            google.script.run.withSuccessHandler(function(html) {
-              document.getElementById("painel").innerHTML = html;
-            }).renderPainel(authLevel);
-          } else {
-            alert("Senha inválida.");
-          }
-        }).verificarSenha(senha);
-      });
-    </script>
-  </body>
+<head>
+  <meta charset="UTF-8">
+  <title>Controle de Altas – UTI Multi 3F</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #e6f5e6;
+      margin: 0;
+      padding: 20px;
+    }
+    h2 {
+      text-align: center;
+    }
+    .leito-box {
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 10px auto;
+      max-width: 600px;
+    }
+    label {
+      font-weight: bold;
+      display: block;
+      margin-top: 10px;
+    }
+    select, input[type="text"], input[type="password"] {
+      width: 100%;
+      padding: 5px;
+      margin-top: 5px;
+    }
+    .buttons {
+      margin-top: 10px;
+    }
+    .buttons button {
+      margin-right: 10px;
+      padding: 6px 12px;
+    }
+    .timestamp {
+      margin-top: 10px;
+      font-size: 0.9em;
+      color: gray;
+    }
+    #login-box {
+      max-width: 400px;
+      margin: 60px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+    }
+  </style>
+</head>
+<body>
+  <div id="login-box">
+    <h2>Acesso ao Painel UTI</h2>
+    <label for="senha">Digite a senha:</label>
+    <input type="password" id="senha" placeholder="123leitura ou 456editar" />
+    <button onclick="verificarSenha()">Entrar</button>
+  </div>
+
+  <div id="painel" style="display:none;">
+    <h2>Controle de Altas – UTI Multi 3F</h2>
+  </div>
+
+  <script>
+    let modo = "leitura";
+
+    function verificarSenha() {
+      const senha = document.getElementById("senha").value;
+      if (senha === "123leitura") {
+        modo = "leitura";
+        iniciarPainel();
+      } else if (senha === "456editar") {
+        modo = "edicao";
+        iniciarPainel();
+      } else {
+        alert("Senha inválida.");
+      }
+    }
+
+    function iniciarPainel() {
+      document.getElementById("login-box").style.display = "none";
+      const painel = document.getElementById("painel");
+      painel.style.display = "block";
+
+      const condicoes = [
+        "Alta Programada", "Alta Confirmada", "Leito Solicitado",
+        "Aguarda liberação de leito", "Saída Realizada", "Aguarda Home Care", "Alta para Casa"
+      ];
+      const observacoes = [
+        "Aguarda avaliação do titular", "Reavaliação após HD", "Reavaliação após procedimento",
+        "Liberado pelo Titular", "Reavaliação após hemoderivado", "Aguarda estabilização clínica"
+      ];
+
+      for (let i = 1; i <= 14; i++) {
+        const box = document.createElement("div");
+        box.className = "leito-box";
+
+        box.innerHTML = `
+          <label>Leito:</label>
+          <select class="leito"><option value="">Selecione</option>
+            ${Array.from({length: 20}, (_, j) => `<option value="${j+1}">${j+1}</option>`).join('')}
+          </select>
+
+          <label>Altas/Condições:</label>
+          <select class="condicao"><option value="">Selecione</option>
+            ${condicoes.map(c => `<option>${c}</option>`).join('')}
+          </select>
+
+          <label>Observações:</label>
+          <select class="observacao"><option value="">Selecione</option>
+            ${observacoes.map(o => `<option>${o}</option>`).join('')}
+          </select>
+
+          <div class="timestamp">Última atualização: <span class="datahora">--</span></div>
+
+          ${modo === "edicao" ? `
+          <div class="buttons">
+            <button onclick="atualizar(this)">Atualizar</button>
+            <button onclick="limpar(this)">Limpar</button>
+          </div>` : ""}
+        `;
+        painel.appendChild(box);
+      }
+    }
+
+    function atualizar(btn) {
+      const box = btn.closest(".leito-box");
+      const timestamp = new Date().toLocaleString();
+      box.querySelector(".datahora").textContent = timestamp;
+    }
+
+    function limpar(btn) {
+      const box = btn.closest(".leito-box");
+      box.querySelector(".leito").selectedIndex = 0;
+      box.querySelector(".condicao").selectedIndex = 0;
+      box.querySelector(".observacao").selectedIndex = 0;
+      box.querySelector(".datahora").textContent = "--";
+    }
+  </script>
+</body>
 </html>
