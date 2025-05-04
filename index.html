@@ -1,0 +1,43 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body { background-color: #e6f5e6; font-family: Arial, sans-serif; }
+      .container { width: 90%; margin: auto; padding: 20px; }
+      .leito-box { background: #ffffff; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; }
+      label { display: block; font-weight: bold; margin-top: 10px; }
+      select, input[type=text] { width: 100%; padding: 6px; margin-top: 4px; }
+      button { margin-top: 10px; padding: 6px 12px; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>Controle de Altas – UTI Multi 3F</h2>
+      <form id="loginForm">
+        <label>Senha de Acesso:</label>
+        <input type="password" id="senha" />
+        <button type="submit">Entrar</button>
+      </form>
+      <div id="painel" style="display:none;"></div>
+    </div>
+    <script>
+      document.getElementById("loginForm").addEventListener("submit", function(e) {
+        e.preventDefault();
+        var senha = document.getElementById("senha").value;
+        google.script.run.withSuccessHandler(function(authLevel) {
+          if (authLevel === "leitura" || authLevel === "edicao") {
+            document.getElementById("loginForm").style.display = "none";
+            document.getElementById("painel").style.display = "block";
+            google.script.run.withSuccessHandler(function(html) {
+              document.getElementById("painel").innerHTML = html;
+            }).renderPainel(authLevel);
+          } else {
+            alert("Senha inválida.");
+          }
+        }).verificarSenha(senha);
+      });
+    </script>
+  </body>
+</html>
